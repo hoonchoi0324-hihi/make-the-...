@@ -166,6 +166,7 @@
 
     <div id="companyPanel" class="company-panel">
       <h3>🏢 국내 대표기업</h3>
+      <p style="margin:0 0 12px;color:var(--muted)">게임에서는 60초가 1개월입니다. 60초가 지나면 월매출이 한 번에 회사 자금으로 입금됩니다.</p>
 
       <div id="companyEmpty" class="company-create">
         <p style="margin:0;color:var(--muted)">아직 국가를 대표하는 회사가 없습니다.</p>
@@ -193,6 +194,8 @@
           <div class="company-stat"><small>회사 자금</small><b id="companyCashText"></b></div>
           <div class="company-stat"><small>직원</small><b id="companyEmployeesText"></b></div>
           <div class="company-stat"><small>월 매출</small><b id="companySalesText"></b></div>
+          <div class="company-stat"><small>기타 자동수익</small><b id="companyPassiveText"></b></div>
+          <div class="company-stat"><small>다음 월말 정산</small><b id="companyProfitText"></b></div>
           <div class="company-stat"><small>브랜드</small><b id="companyBrandText"></b></div>
           <div class="company-stat"><small>품질</small><b id="companyQualityText"></b></div>
           <div class="company-stat"><small>고객 만족</small><b id="companyCustomerText"></b></div>
@@ -203,6 +206,10 @@
           <button type="button" class="btn btn-soft" onclick="companyAction('product')">📦 신제품 개발</button>
           <button type="button" class="btn btn-soft" onclick="companyAction('marketing')">📣 광고 진행</button>
           <button type="button" class="btn btn-soft" onclick="companyAction('export')">🌍 해외 진출</button>
+          <button type="button" class="btn btn-soft" onclick="companyAction('upgradeIncome')">💸 자동수익 강화</button>
+          <button type="button" class="btn btn-soft" onclick="transferToTreasury(1)">🏦 국고로 1억 송금</button>
+          <button type="button" class="btn btn-soft" onclick="transferToTreasury(5)">💰 국고로 5억 송금</button>
+          <button type="button" class="btn btn-soft" onclick="transferAllToTreasury()">💸 전액 국고 송금</button>
         </div>
       </div>
     </div>
@@ -317,6 +324,7 @@ function openGame(){
   document.getElementById('start').classList.add('hidden');
   document.getElementById('game').classList.remove('hidden');
   render();
+  startPassiveIncome();
 }
 
 function render(){
@@ -380,8 +388,7 @@ function choose(index){
 
   if(state.company){
     const c=state.company;
-    const profit=Math.max(0.1,c.sales*0.22);
-    c.cash+=profit;
+    // 회사 순이익은 실시간 타이머에서 지급하므로 턴 진행 시 중복 지급하지 않음
     state.money+=c.sales*0.05;
     c.sales+=Math.max(0.05,(c.brand+c.quality+c.customer)/1000);
     state.economy+=1;
@@ -421,6 +428,8 @@ function createCompany(){
     cash:2,
     employees:20,
     sales:0.8,
+    passiveIncome:10,
+    secondsToSettlement:60,
     brand:20,
     quality:50,
     customer:55
@@ -430,6 +439,58 @@ function createCompany(){
   state.approval=clamp(state.approval+2,0,100);
   state.log.push(`🏢 ${name}(${type}) 설립. 국가예산 3억 원 투자.`);
   render();
+}
+
+
+function transferToTreasury(amount){
+  if(!state.company) return;
+  const c = state.company;
+
+  if(c.cash < amount){
+    alert(`회사 자금이 부족합니다. 현재 회사 자금은 ${formatCompanyCash(c.cash)}입니다.`);
+    return;
+  }
+
+  c.cash -= amount;
+  state.money += amount;
+  state.approval = clamp(state.approval + 1, 0, 100);
+  state.log.push(`🏦 ${c.name}: 국고로 ${amount}억 원 송금.`);
+  render();
+}
+
+function transferAllToTreasury(){
+  if(!state.company) return;
+  const c = state.company;
+  const amount = Math.floor(c.cash * 100) / 100;
+
+  if(amount <= 0){
+    alert("송금할 회사 자금이 없습니다.");
+    return;
+  }
+
+  const ok = confirm(`${amount.toFixed(2)}억 원 전부를 국고로 송금할까요?`);
+  if(!ok) return;
+
+  c.cash = 0;
+  state.money += amount;
+  state.approval = clamp(state.approval + 2, 0, 100);
+  state.log.push(`💸 ${c.name}: 회사 자금 ${amount.toFixed(2)}억 원 전액을 국고로 송금.`);
+  render();
+}
+
+
+function formatCompanyCash(cashInHundredMillions){
+  const won = Math.max(0, Math.round(cashInHundredMillions * 100000000));
+
+  if(won < 1000000){
+    return "₩" + won.toLocaleString();
+  }
+
+  if(won < 100000000){
+    return "₩" + won.toLocaleString() + " (" + (won / 100000000).toFixed(4) + "억)";
+  }
+
+  return (won / 100000000).toFixed(4) + "억 원";
 }
 
 function renderCompany(){
@@ -446,11 +507,15 @@ function renderCompany(){
   info.classList.remove("hidden");
 
   const c=state.company;
+  if(typeof c.passiveIncome === "undefined") c.passiveIncome = 10;
   document.getElementById("companyNameText").textContent=c.name;
   document.getElementById("companyTypeText").textContent=c.type;
-  document.getElementById("companyCashText").textContent=c.cash.toFixed(1)+"억 원";
+  document.getElementById("companyCashText").textContent=formatCompanyCash(c.cash);
   document.getElementById("companyEmployeesText").textContent=c.employees.toLocaleString()+"명";
   document.getElementById("companySalesText").textContent=c.sales.toFixed(1)+"억 원";
+  document.getElementById("companyPassiveText").textContent="₩"+Math.round(c.passiveIncome).toLocaleString()+"/초";
+  if(typeof c.secondsToSettlement === "undefined") c.secondsToSettlement = 60;
+  document.getElementById("companyProfitText").textContent=c.secondsToSettlement+"초 후";
   document.getElementById("companyBrandText").textContent=c.brand;
   document.getElementById("companyQualityText").textContent=c.quality;
   document.getElementById("companyCustomerText").textContent=c.customer;
@@ -482,9 +547,18 @@ function companyAction(action){
   if(action==="export"){
     if(c.brand<30){alert("브랜드 수치 30 이상부터 해외 진출할 수 있습니다.");return}
     if(c.cash<1.5){alert("회사 자금이 부족합니다.");return}
-    c.cash-=1.5;c.sales+=1.2;c.brand+=7;
+    c.cash-=1.5;c.sales+=1.2;c.brand+=7;c.passiveIncome+=40;
     state.economy=clamp(state.economy+4,0,100);
     state.log.push(`🌍 ${c.name}: 해외 시장 진출.`);
+  }
+
+  if(action==="upgradeIncome"){
+    const cost=Math.max(0.5, Math.round((c.passiveIncome/10)*0.3*10)/10);
+    if(c.cash<cost){alert(`자동수익 강화에는 ${cost.toFixed(1)}억 원이 필요합니다.`);return}
+    c.cash-=cost;
+    c.passiveIncome=Math.round(c.passiveIncome*1.5);
+    c.sales+=0.2;
+    state.log.push(`💸 ${c.name}: 자동수익 강화 → ₩${c.passiveIncome.toLocaleString()}/초`);
   }
 
   c.brand=clamp(c.brand,0,100);
@@ -494,6 +568,44 @@ function companyAction(action){
 }
 
 function clamp(v,min,max){return Math.max(min,Math.min(max,Math.round(v)))}
+
+
+let passiveTimer = null;
+
+function startPassiveIncome(){
+  if(passiveTimer) clearInterval(passiveTimer);
+
+  passiveTimer = setInterval(function(){
+    if(!state || !state.company) return;
+
+    const c = state.company;
+    if(typeof c.passiveIncome === "undefined") c.passiveIncome = 10;
+
+    // 기타 자동수익은 매초 지급
+    c.cash += c.passiveIncome / 100000000;
+
+    // 게임 시간: 60초 = 1개월
+    // 월매출은 60초마다 한 번에 입금
+    if(typeof c.secondsToSettlement === "undefined") c.secondsToSettlement = 60;
+    c.secondsToSettlement -= 1;
+
+    if(c.secondsToSettlement <= 0){
+      c.cash += c.sales;
+      state.log.push(`💰 ${c.name}: 월말 정산 완료. 월매출 ${c.sales.toFixed(1)}억 원 입금.`);
+      c.secondsToSettlement = 60;
+    }
+
+    // 화면에 바로 반영
+    const cashEl = document.getElementById("companyCashText");
+    if(cashEl) cashEl.textContent = formatCompanyCash(c.cash);
+
+    const passiveEl = document.getElementById("companyPassiveText");
+    if(passiveEl) passiveEl.textContent = "₩" + Math.round(c.passiveIncome).toLocaleString() + "/초";
+
+    const profitEl = document.getElementById("companyProfitText");
+    if(profitEl) profitEl.textContent = c.secondsToSettlement + "초 후";
+  },1000);
+}
 
 function saveGame(){
   try{
