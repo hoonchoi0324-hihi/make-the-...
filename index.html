@@ -52,6 +52,20 @@
   .logbox{max-height:220px;overflow:auto;background:#111827;color:#d9e4ff;border-radius:14px;padding:14px;font-size:13px;line-height:1.6}
   .actions{display:flex;gap:10px;margin-top:15px}
 
+  .city-panel{margin-top:18px;padding:18px;border:1px solid var(--border);border-radius:18px;background:#f4fbf6}
+  .city-toolbar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+  .city-tool{border:1px solid var(--border);border-radius:12px;padding:10px;background:white;font-weight:800}
+  .city-tool.selected{border-color:var(--primary);background:#edf1ff}
+  .city-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;max-width:620px;margin:12px auto}
+  .city-cell{aspect-ratio:1;border:1px solid #cfd7e8;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;position:relative}
+  .city-cell.locked{filter:grayscale(.55);opacity:.55}
+  .city-cell .price{position:absolute;bottom:3px;right:4px;font-size:9px;background:#fff;padding:1px 3px;border-radius:4px}
+  .terrain-sea{background:#cfeeff}.terrain-mountain{background:#ded8ce}.terrain-plain{background:#dff4cf}
+  .city-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}
+  .city-stat{background:white;border:1px solid var(--border);border-radius:12px;padding:10px}
+  .city-stat small{display:block;color:var(--muted);margin-bottom:4px}
+  @media(max-width:650px){.city-toolbar{grid-template-columns:repeat(2,1fr)}.city-grid{grid-template-columns:repeat(5,1fr)}.city-stats{grid-template-columns:repeat(2,1fr)}}
+
   .company-panel{margin-top:18px;padding:18px;border:1px solid var(--border);border-radius:18px;background:#fffaf0}
   .company-panel h3{margin:0 0 12px}
   .company-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
@@ -163,6 +177,34 @@
       <div id="choices" class="choices"></div>
     </div>
 
+
+
+    <div class="city-panel">
+      <h3>🗺️ 도시와 영토</h3>
+      <p style="color:var(--muted)">빈 땅을 사고 건물을 지으세요. 바다에는 항구, 산에는 공장, 평야에는 대부분의 건물을 지을 수 있습니다.</p>
+      <div class="city-stats">
+        <div class="city-stat"><small>보유 영토</small><b id="landOwnedText"></b></div>
+        <div class="city-stat"><small>주거 수용량</small><b id="housingText"></b></div>
+        <div class="city-stat"><small>교육 수준</small><b id="educationText"></b></div>
+        <div class="city-stat"><small>치안</small><b id="safetyText"></b></div>
+        <div class="city-stat"><small>도시 수입</small><b id="cityIncomeText"></b></div>
+      </div>
+      <div class="city-toolbar">
+        <button class="city-tool selected" data-tool="buy" onclick="selectCityTool(this)">🪙 땅 구매</button>
+        <button class="city-tool" data-tool="house" onclick="selectCityTool(this)">🏠 주택 0.5억</button>
+        <button class="city-tool" data-tool="apartment" onclick="selectCityTool(this)">🏢 아파트 1.5억</button>
+        <button class="city-tool" data-tool="shop" onclick="selectCityTool(this)">🏪 상점 0.8억</button>
+        <button class="city-tool" data-tool="factory" onclick="selectCityTool(this)">🏭 공장 2억</button>
+        <button class="city-tool" data-tool="school" onclick="selectCityTool(this)">🏫 학교 1.2억</button>
+        <button class="city-tool" data-tool="hospital" onclick="selectCityTool(this)">🏥 병원 1.5억</button>
+        <button class="city-tool" data-tool="fire" onclick="selectCityTool(this)">🚒 소방서 1억</button>
+        <button class="city-tool" data-tool="police" onclick="selectCityTool(this)">🚓 경찰서 1억</button>
+        <button class="city-tool" data-tool="park" onclick="selectCityTool(this)">🌳 공원 0.6억</button>
+        <button class="city-tool" data-tool="port" onclick="selectCityTool(this)">⚓ 항구 2억</button>
+        <button class="city-tool" data-tool="demolish" onclick="selectCityTool(this)">🧹 철거</button>
+      </div>
+      <div id="cityGrid" class="city-grid"></div>
+    </div>
 
     <div id="companyPanel" class="company-panel">
       <h3>🏢 국내 대표기업</h3>
@@ -297,7 +339,8 @@ function startGame(){
     defense:15, tech:10, environment:75, approval:70,
     log:[`${country} 건국! 초대 대통령 ${president} 취임.`],
     flag:"",
-    company:null
+    company:null,
+    city:null
   };
 
   state.flag = selectedFlag || "🏳️";
@@ -329,6 +372,7 @@ function openGame(){
 
 function render(){
   if(typeof state.company === "undefined") state.company = null;
+  if(!state.city) state.city=createInitialCity();
   document.getElementById('flag').textContent=state.flag || '🏳️';
   document.getElementById('countryName').textContent=state.country;
   document.getElementById('leaderLine').textContent=`대통령 ${state.president} · ${state.system}`;
@@ -344,6 +388,7 @@ function render(){
   document.getElementById('logbox').innerHTML=state.log.slice().reverse().map(x=>"• "+x).join("<br>");
   showEvent();
   renderCompany();
+  renderCity();
 }
 
 function showEvent(){
@@ -394,7 +439,7 @@ function choose(index){
     state.economy+=1;
   }
 
-  state.population += Math.max(5, Math.round(state.population*0.006));
+  state.population += Math.max(1, Math.round(state.population*0.001));
   state.happiness=clamp(state.happiness,0,100);
   state.approval=clamp(state.approval,0,100);
   state.environment=clamp(state.environment,0,100);
@@ -413,6 +458,58 @@ function choose(index){
   render();
 }
 
+
+
+const CITY_BUILDINGS={
+ house:{icon:"🏠",name:"주택",cost:.5,terrains:["plain"],housing:40,happiness:1,income:0},
+ apartment:{icon:"🏢",name:"아파트",cost:1.5,terrains:["plain"],housing:150,happiness:-1,income:.02},
+ shop:{icon:"🏪",name:"상점",cost:.8,terrains:["plain"],housing:0,happiness:1,income:.08},
+ factory:{icon:"🏭",name:"공장",cost:2,terrains:["plain","mountain"],housing:0,happiness:-3,income:.18},
+ school:{icon:"🏫",name:"학교",cost:1.2,terrains:["plain"],housing:0,happiness:2,income:0,education:8},
+ hospital:{icon:"🏥",name:"병원",cost:1.5,terrains:["plain"],housing:0,happiness:6,income:0},
+ fire:{icon:"🚒",name:"소방서",cost:1,terrains:["plain"],housing:0,happiness:2,income:0,safety:7},
+ police:{icon:"🚓",name:"경찰서",cost:1,terrains:["plain"],housing:0,happiness:2,income:0,safety:9},
+ park:{icon:"🌳",name:"공원",cost:.6,terrains:["plain"],housing:0,happiness:5,income:0},
+ port:{icon:"⚓",name:"항구",cost:2,terrains:["sea"],housing:0,happiness:1,income:.22}
+};
+let selectedCityTool="buy";
+
+function createInitialCity(){
+ const t=["sea","sea","plain","plain","mountain","mountain","sea","plain","plain","plain","mountain","plain","plain","plain","plain","plain","plain","plain","plain","plain","mountain","plain","sea","sea","mountain","plain","plain","plain","sea","sea","mountain","mountain","plain","plain","sea","sea"];
+ return {cells:t.map((terrain,i)=>({terrain,owned:i===14,building:null,price:.4+(i%6)*.05+(terrain==="sea"?.15:terrain==="mountain"?.1:0)})),housing:0,education:10,safety:50,income:0,monthCounter:0};
+}
+function selectCityTool(b){document.querySelectorAll(".city-tool").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");selectedCityTool=b.dataset.tool;}
+function terrainIcon(t){return t==="sea"?"🌊":t==="mountain"?"⛰️":"🌱";}
+function renderCity(){
+ if(!state.city)state.city=createInitialCity(); recalculateCity();
+ const g=document.getElementById("cityGrid"); if(!g)return; g.innerHTML="";
+ state.city.cells.forEach((c,i)=>{const b=document.createElement("button");b.className="city-cell terrain-"+c.terrain+(c.owned?"":" locked");b.textContent=c.building?CITY_BUILDINGS[c.building].icon:terrainIcon(c.terrain);if(!c.owned){const p=document.createElement("span");p.className="price";p.textContent=c.price.toFixed(1)+"억";b.appendChild(p)}b.onclick=()=>handleCityCell(i);g.appendChild(b)});
+ document.getElementById("landOwnedText").textContent=state.city.cells.filter(c=>c.owned).length+"칸";
+ document.getElementById("housingText").textContent=state.city.housing.toLocaleString()+"명";
+ document.getElementById("educationText").textContent=state.city.education;
+ document.getElementById("safetyText").textContent=state.city.safety;
+ document.getElementById("cityIncomeText").textContent=state.city.income.toFixed(2)+"억/월";
+}
+function handleCityCell(i){
+ const c=state.city.cells[i];
+ if(selectedCityTool==="buy"){if(c.owned)return alert("이미 보유한 땅입니다.");if(state.money<c.price)return alert("국고가 부족합니다.");state.money-=c.price;c.owned=true;state.log.push("🗺️ 새 영토 1칸 구매.");render();return}
+ if(!c.owned)return alert("먼저 땅을 구매하세요.");
+ if(selectedCityTool==="demolish"){if(!c.building)return alert("철거할 건물이 없습니다.");c.building=null;render();return}
+ if(c.building)return alert("이미 건물이 있습니다.");
+ const d=CITY_BUILDINGS[selectedCityTool];if(!d)return;if(!d.terrains.includes(c.terrain))return alert("이 지형에는 지을 수 없습니다.");if(state.money<d.cost)return alert("국고가 부족합니다.");
+ state.money-=d.cost;c.building=selectedCityTool;state.log.push(d.icon+" "+d.name+" 건설.");render();
+}
+function recalculateCity(){
+ let housing=0,education=10,safety=50,income=0,happy=0;
+ state.city.cells.forEach(c=>{if(!c.building)return;const b=CITY_BUILDINGS[c.building];housing+=b.housing||0;education+=b.education||0;safety+=b.safety||0;income+=b.income||0;happy+=b.happiness||0});
+ state.city.housing=housing;state.city.education=clamp(education,0,100);state.city.safety=clamp(safety,0,100);state.city.income=income;state.city.happyEffect=happy;
+}
+function processCityMonth(){
+ if(!state.city)return;recalculateCity();state.money+=state.city.income;if(state.company)state.company.sales+=state.city.income*.08;
+ if(state.city.housing>state.population){const growth=Math.max(1,Math.round((state.city.housing-state.population)*.08*Math.max(.2,state.happiness/100)));state.population+=growth}
+ state.happiness=clamp(state.happiness+Math.round((state.city.happyEffect||0)*.05),0,100);
+ state.tech=clamp(state.tech+Math.round((state.city.education-10)/50),0,100);
+}
 
 function createCompany(){
   const name=document.getElementById("companyNameInput").value.trim();
@@ -591,6 +688,7 @@ function startPassiveIncome(){
 
     if(c.secondsToSettlement <= 0){
       c.cash += c.sales;
+      processCityMonth();
       state.log.push(`💰 ${c.name}: 월말 정산 완료. 월매출 ${c.sales.toFixed(1)}억 원 입금.`);
       c.secondsToSettlement = 60;
     }
