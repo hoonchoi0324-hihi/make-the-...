@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#3457d5" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="format-detection" content="telephone=no" />
+<title>AI 나라 키우기</title>
+<style>
+  :root{
+    --bg:#eef4ff; --card:#ffffff; --text:#172033; --muted:#68738a;
+    --primary:#3457d5; --border:#d9e1f2; --good:#14804a; --warn:#b36b00;
+  }
+  *{box-sizing:border-box}
+
+  .mobile-guide{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;
+    padding:10px max(12px,env(safe-area-inset-left));background:#172033;color:white;font-size:13px}
+  .mobile-guide b{white-space:nowrap}.mobile-guide span{flex:1;line-height:1.4}
+  .mobile-guide button{border:0;border-radius:9px;padding:7px 10px;background:white;color:#172033;font-weight:800}
+
+  html{-webkit-text-size-adjust:100%;touch-action:manipulation} body{margin:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;background:linear-gradient(135deg,#e8efff,#f8fbff);color:var(--text)}
+  button,input,select{font:inherit;-webkit-appearance:none;appearance:none} button{-webkit-tap-highlight-color:transparent;touch-action:manipulation} input,select{font-size:16px}
+  .wrap{max-width:900px;margin:auto;padding:22px}
+  .title{text-align:center;margin:10px 0 20px}
+  .title h1{margin:0;font-size:clamp(28px,6vw,48px)}
+  .title p{color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:22px;box-shadow:0 14px 35px rgba(35,59,120,.10)}
+  .hidden{display:none}
+  label{display:block;font-weight:700;margin:15px 0 7px}
+  input,select{width:100%;padding:13px 14px;border:1px solid var(--border);border-radius:12px;background:white}
+  .btn{border:0;border-radius:13px;padding:13px 17px;cursor:pointer;font-weight:800}
+  .btn-primary{background:var(--primary);color:white;width:100%;margin-top:20px}
+  .btn-soft{background:#edf1ff;color:#2946b6}
+  .topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:14px}
+  .nation{display:flex;gap:12px;align-items:center}
+  .flag{width:72px;height:48px;object-fit:cover;border:1px solid var(--border);border-radius:8px;background:#eee}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:15px 0}
+  .stat{background:#f7f9ff;border:1px solid var(--border);border-radius:14px;padding:12px}
+  .stat small{display:block;color:var(--muted);margin-bottom:4px}
+  .stat b{font-size:18px}
+  .event{margin-top:16px;padding:20px;border-radius:18px;background:linear-gradient(135deg,#f7f4ff,#eef7ff);border:1px solid var(--border)}
+  .event h2{margin-top:0}
+  .choices{display:grid;gap:10px;margin-top:16px}
+  .choice{text-align:left;background:white;border:1px solid var(--border);border-radius:14px;padding:14px;cursor:pointer}
+  .choice:hover{border-color:var(--primary);transform:translateY(-1px)}
+  .choice b{display:block;margin-bottom:5px}
+  .choice span{color:var(--muted);font-size:14px}
+  .log{margin-top:18px}
+  .log h3{margin-bottom:8px}
+  .logbox{max-height:220px;overflow:auto;background:#111827;color:#d9e4ff;border-radius:14px;padding:14px;font-size:13px;line-height:1.6}
+  .actions{display:flex;gap:10px;margin-top:15px}
+
+  .flag-picker{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;margin-top:8px}
+  .flag-option{font-size:30px;line-height:1;background:white;border:2px solid var(--border);border-radius:13px;padding:10px;cursor:pointer}
+  .flag-option:hover{transform:translateY(-1px);border-color:var(--primary)}
+  .flag-option.selected{border-color:var(--primary);background:#edf1ff;box-shadow:0 0 0 3px rgba(52,87,213,.10)}
+  .flag-custom{display:flex;gap:9px;margin-top:10px}
+  .flag-custom input{flex:1}
+  .flag-custom button{white-space:nowrap}
+  .flag.emoji{display:flex;align-items:center;justify-content:center;font-size:38px;background:#f7f9ff}
+  .actions button{flex:1}
+  @media(max-width:650px){.stats{grid-template-columns:repeat(2,1fr)}.topbar{align-items:flex-start}.flag{width:58px;height:40px}}
+</style>
+</head>
+<body>
+
+  <div id="mobileGuide" class="mobile-guide">
+    <b>📱 휴대폰에서 실행</b>
+    <span>아이폰: 파일을 누른 뒤 공유 → Safari에서 열기 · 안드로이드: 내 파일에서 누른 뒤 Chrome으로 열기</span>
+    <button type="button" onclick="document.getElementById('mobileGuide').remove()">확인</button>
+  </div>
+
+<div class="wrap">
+  <div class="title">
+    <h1>🌍 AI 나라 키우기</h1>
+    <p>처음에 나라를 만들고, 그다음부터는 선택으로 성장시키세요.</p>
+  </div>
+
+  <section id="start" class="card">
+    <h2>새 나라 만들기</h2>
+    <label for="president">대통령 이름</label>
+    <input id="president" placeholder="예: 최지훈" value="최지훈">
+
+    <label for="country">나라 이름</label>
+    <input id="country" placeholder="예: 해리나" value="해리나">
+
+    <label for="system">정치·경제 체제</label>
+    <select id="system">
+      <option>민주주의 · 자본주의</option>
+      <option>입헌군주제 · 자본주의</option>
+      <option>사회민주주의 · 혼합경제</option>
+      <option>대통령중심제 · 시장경제</option>
+    </select>
+
+    <label for="difficulty">난이도</label>
+    <select id="difficulty">
+      <option value="easy">쉬움</option>
+      <option value="normal" selected>보통</option>
+      <option value="hard">어려움</option>
+    </select>
+
+    <label>국기 이모티콘 선택</label>
+    <div id="flagPicker" class="flag-picker" aria-label="국기 선택">
+      <button type="button" class="flag-option selected" data-flag="🏳️" onclick="selectFlag(this)">🏳️</button>
+      <button type="button" class="flag-option" data-flag="🏴" onclick="selectFlag(this)">🏴</button>
+      <button type="button" class="flag-option" data-flag="🚩" onclick="selectFlag(this)">🚩</button>
+      <button type="button" class="flag-option" data-flag="🇰🇷" onclick="selectFlag(this)">🇰🇷</button>
+      <button type="button" class="flag-option" data-flag="🇺🇳" onclick="selectFlag(this)">🇺🇳</button>
+      <button type="button" class="flag-option" data-flag="⭐" onclick="selectFlag(this)">⭐</button>
+      <button type="button" class="flag-option" data-flag="🌙" onclick="selectFlag(this)">🌙</button>
+      <button type="button" class="flag-option" data-flag="☀️" onclick="selectFlag(this)">☀️</button>
+      <button type="button" class="flag-option" data-flag="⚓" onclick="selectFlag(this)">⚓</button>
+      <button type="button" class="flag-option" data-flag="🐉" onclick="selectFlag(this)">🐉</button>
+      <button type="button" class="flag-option" data-flag="🦅" onclick="selectFlag(this)">🦅</button>
+      <button type="button" class="flag-option" data-flag="🌳" onclick="selectFlag(this)">🌳</button>
+    </div>
+    <div class="flag-custom">
+      <input id="customFlag" maxlength="4" placeholder="직접 이모티콘 입력">
+      <button type="button" class="btn btn-soft" onclick="applyCustomFlag()">적용</button>
+    </div>
+
+    <button class="btn btn-primary" onclick="startGame()">게임 시작</button>
+  </section>
+
+  <section id="game" class="card hidden">
+    <div class="topbar">
+      <div class="nation">
+        <div id="flag" class="flag emoji" aria-label="국기">🏳️</div>
+        <div>
+          <h2 id="countryName" style="margin:0"></h2>
+          <div id="leaderLine" style="color:var(--muted)"></div>
+        </div>
+      </div>
+      <div id="date" style="font-weight:800"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><small>국고</small><b id="money"></b></div>
+      <div class="stat"><small>인구</small><b id="population"></b></div>
+      <div class="stat"><small>행복도</small><b id="happiness"></b></div>
+      <div class="stat"><small>경제력</small><b id="economy"></b></div>
+      <div class="stat"><small>국방력</small><b id="defense"></b></div>
+      <div class="stat"><small>기술력</small><b id="tech"></b></div>
+      <div class="stat"><small>환경</small><b id="environment"></b></div>
+      <div class="stat"><small>지지율</small><b id="approval"></b></div>
+    </div>
+
+    <div class="event">
+      <h2 id="eventTitle"></h2>
+      <p id="eventText"></p>
+      <div id="choices" class="choices"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-soft" onclick="saveGame()">저장</button>
+      <button class="btn btn-soft" onclick="loadGame()">불러오기</button>
+      <button class="btn btn-soft" onclick="resetGame()">처음부터</button>
+    </div>
+
+    <div class="log">
+      <h3>📜 국가 기록</h3>
+      <div id="logbox" class="logbox"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const events = [
+  {
+    title:"⚓ 오래된 항구의 확장",
+    text:"상인들이 항구를 넓혀 달라고 요청했습니다. 예산을 투입하면 무역이 성장하지만 국고가 줄어듭니다.",
+    choices:[
+      {name:"5억 원을 투자한다", desc:"경제와 인구가 증가하지만 국고가 감소합니다.", d:{money:-5,economy:12,population:120,happiness:3}},
+      {name:"2억 원만 투자한다", desc:"작지만 안정적인 성장을 기대할 수 있습니다.", d:{money:-2,economy:6,population:50,happiness:1}},
+      {name:"민간 기업에 맡긴다", desc:"국고 부담은 적지만 지지율이 조금 떨어질 수 있습니다.", d:{economy:8,approval:-3}},
+      {name:"확장을 보류한다", desc:"국고는 지키지만 경제 성장 기회를 놓칩니다.", d:{happiness:-2}}
+    ]
+  },
+  {
+    title:"🏫 교육 예산 논쟁",
+    text:"학교가 부족해졌습니다. 교사와 학부모들이 교육 투자를 요구합니다.",
+    choices:[
+      {name:"교육에 5억 원 투자", desc:"기술력과 행복도가 크게 오릅니다.", d:{money:-5,tech:14,happiness:7,approval:4}},
+      {name:"온라인 학교를 만든다", desc:"적은 비용으로 기술력을 높입니다.", d:{money:-2,tech:9,happiness:3}},
+      {name:"기업 장학금을 유치한다", desc:"경제와 교육이 함께 성장하지만 기업 영향력이 커집니다.", d:{economy:4,tech:6,approval:-1}},
+      {name:"현재 제도를 유지한다", desc:"비용은 없지만 국민 불만이 늘어납니다.", d:{happiness:-5,approval:-4}}
+    ]
+  },
+  {
+    title:"🌊 거대한 태풍 접근",
+    text:"기상청이 사흘 뒤 강력한 태풍이 상륙한다고 경고했습니다.",
+    choices:[
+      {name:"전국 비상대피 명령", desc:"비용은 크지만 피해를 최소화합니다.", d:{money:-3,happiness:4,approval:6}},
+      {name:"항구와 발전소만 방어", desc:"핵심 시설을 지키지만 일부 지역 피해가 발생합니다.", d:{money:-1,economy:-2,happiness:-2}},
+      {name:"국제 원조를 요청", desc:"비용을 줄일 수 있지만 외교적 부담이 생깁니다.", d:{money:1,approval:-2}},
+      {name:"상황을 지켜본다", desc:"운이 좋으면 비용이 없지만 큰 피해가 날 수 있습니다.", risky:true}
+    ]
+  },
+  {
+    title:"🔬 신기술 연구 제안",
+    text:"젊은 과학자들이 해수 담수화 기술 개발을 제안했습니다.",
+    choices:[
+      {name:"국가 연구소를 세운다", desc:"비용은 크지만 기술과 환경이 발전합니다.", d:{money:-4,tech:15,environment:8}},
+      {name:"해외 연구진과 공동개발", desc:"빠른 기술 성장이 가능하지만 수익을 나눕니다.", d:{money:-2,tech:10,economy:3}},
+      {name:"민간 투자만 허용", desc:"국고 지출 없이 경제력이 소폭 증가합니다.", d:{economy:5,tech:4}},
+      {name:"연구를 보류한다", desc:"현재 예산을 지킬 수 있습니다.", d:{approval:-2}}
+    ]
+  },
+  {
+    title:"🛡️ 주변 해역의 긴장",
+    text:"이웃 국가의 군함이 해리나 인근 해역에서 훈련을 시작했습니다.",
+    choices:[
+      {name:"해군을 증강한다", desc:"국방력은 크게 오르지만 비용이 큽니다.", d:{money:-5,defense:15,approval:3}},
+      {name:"외교 협상을 제안한다", desc:"성공 시 긴장이 완화됩니다.", d:{money:-1,approval:4,economy:2}},
+      {name:"동맹국에 보호를 요청한다", desc:"국방력은 오르지만 자주성 논쟁이 생깁니다.", d:{defense:8,approval:-3}},
+      {name:"무대응 원칙을 유지한다", desc:"비용은 없지만 국민이 불안해합니다.", d:{happiness:-5,approval:-4}}
+    ]
+  }
+];
+
+let state = {};
+
+function startGame(){
+  const president = document.getElementById('president').value.trim();
+  const country = document.getElementById('country').value.trim();
+  if(!president || !country){ alert('대통령 이름과 나라 이름을 입력하세요.'); return; }
+
+  state = {
+    president, country,
+    system:document.getElementById('system').value,
+    difficulty:document.getElementById('difficulty').value,
+    year:2026, month:1, turn:0,
+    money:10, population:1000, happiness:75, economy:20,
+    defense:15, tech:10, environment:75, approval:70,
+    log:[`${country} 건국! 초대 대통령 ${president} 취임.`],
+    flag:""
+  };
+
+  state.flag = selectedFlag || "🏳️";
+  openGame();
+}
+
+let selectedFlag = "🏳️";
+
+function selectFlag(button){
+  document.querySelectorAll(".flag-option").forEach(x=>x.classList.remove("selected"));
+  button.classList.add("selected");
+  selectedFlag = button.dataset.flag;
+  document.getElementById("customFlag").value = "";
+}
+
+function applyCustomFlag(){
+  const value = document.getElementById("customFlag").value.trim();
+  if(!value){ alert("이모티콘을 입력하세요."); return; }
+  selectedFlag = value;
+  document.querySelectorAll(".flag-option").forEach(x=>x.classList.remove("selected"));
+}
+
+function openGame(){
+  document.getElementById('start').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+  render();
+}
+
+function render(){
+  document.getElementById('flag').textContent=state.flag || '🏳️';
+  document.getElementById('countryName').textContent=state.country;
+  document.getElementById('leaderLine').textContent=`대통령 ${state.president} · ${state.system}`;
+  document.getElementById('date').textContent=`${state.year}년 ${state.month}월`;
+  document.getElementById('money').textContent=`${state.money.toFixed(1)}억 원`;
+  document.getElementById('population').textContent=state.population.toLocaleString()+"명";
+  document.getElementById('happiness').textContent=state.happiness+"%";
+  document.getElementById('economy').textContent=state.economy;
+  document.getElementById('defense').textContent=state.defense;
+  document.getElementById('tech').textContent=state.tech;
+  document.getElementById('environment').textContent=state.environment;
+  document.getElementById('approval').textContent=state.approval+"%";
+  document.getElementById('logbox').innerHTML=state.log.slice().reverse().map(x=>"• "+x).join("<br>");
+  showEvent();
+}
+
+function showEvent(){
+  const event=events[state.turn % events.length];
+  document.getElementById('eventTitle').textContent=event.title;
+  document.getElementById('eventText').textContent=event.text;
+  const box=document.getElementById('choices');
+  box.innerHTML="";
+  event.choices.forEach((c,i)=>{
+    const b=document.createElement('button');
+    b.className="choice";
+    b.innerHTML=`<b>${i+1}. ${c.name}</b><span>${c.desc}</span>`;
+    b.onclick=()=>choose(i);
+    box.appendChild(b);
+  });
+}
+
+function choose(index){
+  const event=events[state.turn % events.length];
+  const choice=event.choices[index];
+  let d={...(choice.d||{})};
+
+  if(choice.risky){
+    if(Math.random()<0.45){
+      d={money:-6,economy:-10,population:-80,happiness:-12,approval:-10};
+      state.log.push(`${event.title}: 무대응 결과 큰 피해가 발생했습니다.`);
+    }else{
+      d={happiness:1,approval:2};
+      state.log.push(`${event.title}: 태풍이 비껴가 큰 피해가 없었습니다.`);
+    }
+  }else{
+    state.log.push(`${event.title} → ${choice.name}`);
+  }
+
+  for(const [k,v] of Object.entries(d)){
+    state[k]=(state[k]||0)+v;
+  }
+
+  const diff=state.difficulty;
+  const monthlyIncome = diff==="easy" ? 1.5 : diff==="hard" ? 0.6 : 1.0;
+  state.money += monthlyIncome;
+  state.population += Math.max(5, Math.round(state.population*0.006));
+  state.happiness=clamp(state.happiness,0,100);
+  state.approval=clamp(state.approval,0,100);
+  state.environment=clamp(state.environment,0,100);
+  state.economy=clamp(state.economy,0,100);
+  state.defense=clamp(state.defense,0,100);
+  state.tech=clamp(state.tech,0,100);
+  state.money=Math.max(-20,state.money);
+
+  state.turn++;
+  state.month++;
+  if(state.month>12){state.month=1;state.year++}
+
+  if(state.approval<=10){
+    alert("지지율이 너무 낮습니다. 다음 선택이 매우 중요합니다!");
+  }
+  render();
+}
+
+function clamp(v,min,max){return Math.max(min,Math.min(max,Math.round(v)))}
+
+function saveGame(){
+  try{
+    localStorage.setItem("aiNationGame",JSON.stringify(state));
+    alert("이 기기에 저장했습니다.");
+  }catch(e){
+    alert("현재 미리보기에서는 저장이 제한됩니다. Safari 또는 Chrome으로 열어주세요.");
+  }
+}
+function loadGame(){
+  try{
+    const data=localStorage.getItem("aiNationGame");
+    if(!data){alert("저장된 게임이 없습니다.");return}
+    state=JSON.parse(data); openGame();
+  }catch(e){
+    alert("현재 미리보기에서는 불러오기가 제한됩니다. Safari 또는 Chrome으로 열어주세요.");
+  }
+}
+function resetGame(){
+  if(confirm("처음부터 다시 시작할까요?")){
+    localStorage.removeItem("aiNationGame");
+    location.reload();
+  }
+}
+</script>
+</body>
+</html>
