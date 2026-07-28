@@ -52,6 +52,16 @@
   .logbox{max-height:220px;overflow:auto;background:#111827;color:#d9e4ff;border-radius:14px;padding:14px;font-size:13px;line-height:1.6}
   .actions{display:flex;gap:10px;margin-top:15px}
 
+  .company-panel{margin-top:18px;padding:18px;border:1px solid var(--border);border-radius:18px;background:#fffaf0}
+  .company-panel h3{margin:0 0 12px}
+  .company-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+  .company-stat{background:white;border:1px solid var(--border);border-radius:13px;padding:11px}
+  .company-stat small{display:block;color:var(--muted);margin-bottom:4px}
+  .company-create{display:grid;gap:10px}
+  .company-create select,.company-create input{width:100%}
+  .company-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:12px}
+  @media(max-width:650px){.company-grid{grid-template-columns:repeat(2,1fr)}}
+
   .flag-picker{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;margin-top:8px}
   .flag-option{font-size:30px;line-height:1;background:white;border:2px solid var(--border);border-radius:13px;padding:10px;cursor:pointer}
   .flag-option:hover{transform:translateY(-1px);border-color:var(--primary)}
@@ -153,6 +163,50 @@
       <div id="choices" class="choices"></div>
     </div>
 
+
+    <div id="companyPanel" class="company-panel">
+      <h3>🏢 국내 대표기업</h3>
+
+      <div id="companyEmpty" class="company-create">
+        <p style="margin:0;color:var(--muted)">아직 국가를 대표하는 회사가 없습니다.</p>
+
+        <input id="companyNameInput" placeholder="회사 이름 예: 해리나테크">
+
+        <select id="companyTypeInput">
+          <option value="IT">💻 IT 회사</option>
+          <option value="자동차">🚗 자동차 회사</option>
+          <option value="식품">🍔 식품 회사</option>
+          <option value="건설">🏗️ 건설 회사</option>
+          <option value="해운">🚢 해운 회사</option>
+          <option value="에너지">⚡ 에너지 회사</option>
+        </select>
+
+        <button type="button" class="btn btn-primary" onclick="createCompany()">
+          회사 설립하기 · 국가예산 3억 원
+        </button>
+      </div>
+
+      <div id="companyInfo" class="hidden">
+        <div class="company-grid">
+          <div class="company-stat"><small>회사명</small><b id="companyNameText"></b></div>
+          <div class="company-stat"><small>업종</small><b id="companyTypeText"></b></div>
+          <div class="company-stat"><small>회사 자금</small><b id="companyCashText"></b></div>
+          <div class="company-stat"><small>직원</small><b id="companyEmployeesText"></b></div>
+          <div class="company-stat"><small>월 매출</small><b id="companySalesText"></b></div>
+          <div class="company-stat"><small>브랜드</small><b id="companyBrandText"></b></div>
+          <div class="company-stat"><small>품질</small><b id="companyQualityText"></b></div>
+          <div class="company-stat"><small>고객 만족</small><b id="companyCustomerText"></b></div>
+        </div>
+
+        <div class="company-actions">
+          <button type="button" class="btn btn-soft" onclick="companyAction('hire')">👥 직원 채용</button>
+          <button type="button" class="btn btn-soft" onclick="companyAction('product')">📦 신제품 개발</button>
+          <button type="button" class="btn btn-soft" onclick="companyAction('marketing')">📣 광고 진행</button>
+          <button type="button" class="btn btn-soft" onclick="companyAction('export')">🌍 해외 진출</button>
+        </div>
+      </div>
+    </div>
+
     <div class="actions">
       <button class="btn btn-soft" onclick="saveGame()">저장</button>
       <button class="btn btn-soft" onclick="loadGame()">불러오기</button>
@@ -235,7 +289,8 @@ function startGame(){
     money:10, population:1000, happiness:75, economy:20,
     defense:15, tech:10, environment:75, approval:70,
     log:[`${country} 건국! 초대 대통령 ${president} 취임.`],
-    flag:""
+    flag:"",
+    company:null
   };
 
   state.flag = selectedFlag || "🏳️";
@@ -265,6 +320,7 @@ function openGame(){
 }
 
 function render(){
+  if(typeof state.company === "undefined") state.company = null;
   document.getElementById('flag').textContent=state.flag || '🏳️';
   document.getElementById('countryName').textContent=state.country;
   document.getElementById('leaderLine').textContent=`대통령 ${state.president} · ${state.system}`;
@@ -279,6 +335,7 @@ function render(){
   document.getElementById('approval').textContent=state.approval+"%";
   document.getElementById('logbox').innerHTML=state.log.slice().reverse().map(x=>"• "+x).join("<br>");
   showEvent();
+  renderCompany();
 }
 
 function showEvent(){
@@ -320,6 +377,16 @@ function choose(index){
   const diff=state.difficulty;
   const monthlyIncome = diff==="easy" ? 1.5 : diff==="hard" ? 0.6 : 1.0;
   state.money += monthlyIncome;
+
+  if(state.company){
+    const c=state.company;
+    const profit=Math.max(0.1,c.sales*0.22);
+    c.cash+=profit;
+    state.money+=c.sales*0.05;
+    c.sales+=Math.max(0.05,(c.brand+c.quality+c.customer)/1000);
+    state.economy+=1;
+  }
+
   state.population += Math.max(5, Math.round(state.population*0.006));
   state.happiness=clamp(state.happiness,0,100);
   state.approval=clamp(state.approval,0,100);
@@ -336,6 +403,93 @@ function choose(index){
   if(state.approval<=10){
     alert("지지율이 너무 낮습니다. 다음 선택이 매우 중요합니다!");
   }
+  render();
+}
+
+
+function createCompany(){
+  const name=document.getElementById("companyNameInput").value.trim();
+  const type=document.getElementById("companyTypeInput").value;
+
+  if(!name){alert("회사 이름을 입력하세요.");return}
+  if(state.money<3){alert("국고가 3억 원보다 부족합니다.");return}
+
+  state.money-=3;
+  state.company={
+    name,
+    type,
+    cash:2,
+    employees:20,
+    sales:0.8,
+    brand:20,
+    quality:50,
+    customer:55
+  };
+
+  state.economy=clamp(state.economy+6,0,100);
+  state.approval=clamp(state.approval+2,0,100);
+  state.log.push(`🏢 ${name}(${type}) 설립. 국가예산 3억 원 투자.`);
+  render();
+}
+
+function renderCompany(){
+  const empty=document.getElementById("companyEmpty");
+  const info=document.getElementById("companyInfo");
+
+  if(!state.company){
+    empty.classList.remove("hidden");
+    info.classList.add("hidden");
+    return;
+  }
+
+  empty.classList.add("hidden");
+  info.classList.remove("hidden");
+
+  const c=state.company;
+  document.getElementById("companyNameText").textContent=c.name;
+  document.getElementById("companyTypeText").textContent=c.type;
+  document.getElementById("companyCashText").textContent=c.cash.toFixed(1)+"억 원";
+  document.getElementById("companyEmployeesText").textContent=c.employees.toLocaleString()+"명";
+  document.getElementById("companySalesText").textContent=c.sales.toFixed(1)+"억 원";
+  document.getElementById("companyBrandText").textContent=c.brand;
+  document.getElementById("companyQualityText").textContent=c.quality;
+  document.getElementById("companyCustomerText").textContent=c.customer;
+}
+
+function companyAction(action){
+  if(!state.company)return;
+  const c=state.company;
+
+  if(action==="hire"){
+    if(c.cash<0.5){alert("회사 자금이 부족합니다.");return}
+    c.cash-=0.5;c.employees+=15;c.sales+=0.3;c.quality+=2;
+    state.log.push(`👥 ${c.name}: 직원 15명 채용.`);
+  }
+
+  if(action==="product"){
+    if(c.cash<1){alert("회사 자금이 부족합니다.");return}
+    c.cash-=1;c.sales+=0.7;c.quality+=6;c.customer+=4;c.brand+=3;
+    state.tech=clamp(state.tech+2,0,100);
+    state.log.push(`📦 ${c.name}: 신제품 개발.`);
+  }
+
+  if(action==="marketing"){
+    if(c.cash<0.7){alert("회사 자금이 부족합니다.");return}
+    c.cash-=0.7;c.sales+=0.5;c.brand+=8;c.customer+=2;
+    state.log.push(`📣 ${c.name}: 전국 광고 진행.`);
+  }
+
+  if(action==="export"){
+    if(c.brand<30){alert("브랜드 수치 30 이상부터 해외 진출할 수 있습니다.");return}
+    if(c.cash<1.5){alert("회사 자금이 부족합니다.");return}
+    c.cash-=1.5;c.sales+=1.2;c.brand+=7;
+    state.economy=clamp(state.economy+4,0,100);
+    state.log.push(`🌍 ${c.name}: 해외 시장 진출.`);
+  }
+
+  c.brand=clamp(c.brand,0,100);
+  c.quality=clamp(c.quality,0,100);
+  c.customer=clamp(c.customer,0,100);
   render();
 }
 
