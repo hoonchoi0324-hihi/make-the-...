@@ -14,6 +14,8 @@
     --primary:#3457d5; --border:#d9e1f2; --good:#14804a; --warn:#b36b00;
   }
   *{box-sizing:border-box}
+  .sound-control{position:fixed;right:14px;bottom:14px;z-index:50;border:0;border-radius:999px;width:54px;height:54px;background:#172033;color:white;font-size:25px;box-shadow:0 8px 24px rgba(0,0,0,.22)}
+
 
   .mobile-guide{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;
     padding:10px max(12px,env(safe-area-inset-left));background:#172033;color:white;font-size:13px}
@@ -52,6 +54,17 @@
   .logbox{max-height:220px;overflow:auto;background:#111827;color:#d9e4ff;border-radius:14px;padding:14px;font-size:13px;line-height:1.6}
   .actions{display:flex;gap:10px;margin-top:15px}
 
+  .war-panel{margin-top:18px;padding:18px;border:1px solid var(--border);border-radius:18px;background:#fff5f5}
+  .war-panel h3{margin:0 0 10px}
+  .enemy-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .enemy-card{background:white;border:1px solid var(--border);border-radius:14px;padding:12px}
+  .enemy-card h4{margin:0 0 8px}
+  .enemy-stats{font-size:13px;color:var(--muted);line-height:1.6}
+  .enemy-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:10px}
+  .enemy-actions button{border:0;border-radius:10px;padding:9px;background:#edf1ff;font-weight:800}
+  .war-log{margin-top:12px;padding:12px;border-radius:12px;background:#2a1111;color:#ffdede;font-size:13px;line-height:1.6}
+  @media(max-width:650px){.enemy-grid{grid-template-columns:1fr}}
+
   .city-panel{margin-top:18px;padding:18px;border:1px solid var(--border);border-radius:18px;background:#f4fbf6}
   .city-toolbar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
   .city-tool{border:1px solid var(--border);border-radius:12px;padding:10px;background:white;font-weight:800}
@@ -89,6 +102,7 @@
 </style>
 </head>
 <body>
+<button id="soundButton" class="sound-control" type="button" onclick="toggleSound()">🔊</button>
 
   <div id="mobileGuide" class="mobile-guide">
     <b>📱 휴대폰에서 실행</b>
@@ -206,6 +220,24 @@
       <div id="cityGrid" class="city-grid"></div>
     </div>
 
+
+    <div class="war-panel">
+      <h3>⚔️ 적나라와 전쟁</h3>
+      <p style="margin:0 0 12px;color:var(--muted)">
+        외교로 친해지거나, 군비를 키우거나, 전쟁을 선포할 수 있습니다.
+      </p>
+
+      <div class="city-stats">
+        <div class="city-stat"><small>우리 군사력</small><b id="ourPowerText"></b></div>
+        <div class="city-stat"><small>전쟁 상태</small><b id="warStatusText"></b></div>
+        <div class="city-stat"><small>점령 영토</small><b id="capturedLandText"></b></div>
+        <div class="city-stat"><small>전쟁 비용</small><b id="warCostText"></b></div>
+      </div>
+
+      <div id="enemyGrid" class="enemy-grid"></div>
+      <div id="warLog" class="war-log">아직 전쟁 기록이 없습니다.</div>
+    </div>
+
     <div id="companyPanel" class="company-panel">
       <h3>🏢 국내 대표기업</h3>
       <p style="margin:0 0 12px;color:var(--muted)">게임에서는 60초가 1개월입니다. 60초가 지나면 월매출이 한 번에 회사 자금으로 입금됩니다.</p>
@@ -270,6 +302,16 @@
 </div>
 
 <script>
+
+let soundEnabled=true,audioContext=null;
+function getAudioContext(){if(!audioContext){const C=window.AudioContext||window.webkitAudioContext;if(C)audioContext=new C()}if(audioContext&&audioContext.state==="suspended")audioContext.resume();return audioContext}
+function tone(f,d=.08,t="sine",v=.06,delay=0){if(!soundEnabled)return;const c=getAudioContext();if(!c)return;const o=c.createOscillator(),g=c.createGain(),s=c.currentTime+delay;o.type=t;o.frequency.setValueAtTime(f,s);g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(v,s+.01);g.gain.exponentialRampToValueAtTime(.0001,s+d);o.connect(g);g.connect(c.destination);o.start(s);o.stop(s+d+.02)}
+function playSound(n){if(n==="click")tone(520,.05);if(n==="buy"){tone(420,.07,"triangle");tone(640,.1,"triangle",.06,.07)}if(n==="build"){tone(260,.06,"square",.035);tone(390,.07,"square",.035,.07);tone(520,.11,"triangle",.055,.14)}if(n==="money"){tone(660,.07);tone(880,.11,"sine",.06,.08)}if(n==="success"){tone(523,.08,"triangle");tone(659,.08,"triangle",.055,.09);tone(784,.15,"triangle",.065,.18)}if(n==="error"){tone(180,.13,"sawtooth",.045);tone(140,.17,"sawtooth",.04,.1)}if(n==="demolish"){tone(180,.08,"square",.04);tone(120,.14,"square",.035,.07)}}
+function toggleSound(){soundEnabled=!soundEnabled;document.getElementById('soundButton').textContent=soundEnabled?'🔊':'🔇';try{localStorage.setItem('nationSoundEnabled',soundEnabled?'1':'0')}catch(e){}if(soundEnabled)playSound('success')}
+try{soundEnabled=localStorage.getItem('nationSoundEnabled')!=='0'}catch(e){}
+document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('soundButton');if(b)b.textContent=soundEnabled?'🔊':'🔇'});
+document.addEventListener('pointerdown',function u(){getAudioContext();document.removeEventListener('pointerdown',u)},{once:true});
+
 const events = [
   {
     title:"⚓ 오래된 항구의 확장",
@@ -326,6 +368,7 @@ const events = [
 let state = {};
 
 function startGame(){
+  playSound("success");
   const president = document.getElementById('president').value.trim();
   const country = document.getElementById('country').value.trim();
   if(!president || !country){ alert('대통령 이름과 나라 이름을 입력하세요.'); return; }
@@ -340,7 +383,8 @@ function startGame(){
     log:[`${country} 건국! 초대 대통령 ${president} 취임.`],
     flag:"",
     company:null,
-    city:null
+    city:null,
+    war:null
   };
 
   state.flag = selectedFlag || "🏳️";
@@ -350,6 +394,7 @@ function startGame(){
 let selectedFlag = "🏳️";
 
 function selectFlag(button){
+  playSound("click");
   document.querySelectorAll(".flag-option").forEach(x=>x.classList.remove("selected"));
   button.classList.add("selected");
   selectedFlag = button.dataset.flag;
@@ -373,6 +418,7 @@ function openGame(){
 function render(){
   if(typeof state.company === "undefined") state.company = null;
   if(!state.city) state.city=createInitialCity();
+  if(!state.war) state.war=createWarState();
   document.getElementById('flag').textContent=state.flag || '🏳️';
   document.getElementById('countryName').textContent=state.country;
   document.getElementById('leaderLine').textContent=`대통령 ${state.president} · ${state.system}`;
@@ -389,6 +435,7 @@ function render(){
   showEvent();
   renderCompany();
   renderCity();
+  renderWar();
 }
 
 function showEvent(){
@@ -407,6 +454,7 @@ function showEvent(){
 }
 
 function choose(index){
+  playSound("click");
   const event=events[state.turn % events.length];
   const choice=event.choices[index];
   let d={...(choice.d||{})};
@@ -478,7 +526,7 @@ function createInitialCity(){
  const t=["sea","sea","plain","plain","mountain","mountain","sea","plain","plain","plain","mountain","plain","plain","plain","plain","plain","plain","plain","plain","plain","mountain","plain","sea","sea","mountain","plain","plain","plain","sea","sea","mountain","mountain","plain","plain","sea","sea"];
  return {cells:t.map((terrain,i)=>({terrain,owned:i===14,building:null,price:.4+(i%6)*.05+(terrain==="sea"?.15:terrain==="mountain"?.1:0)})),housing:0,education:10,safety:50,income:0,monthCounter:0};
 }
-function selectCityTool(b){document.querySelectorAll(".city-tool").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");selectedCityTool=b.dataset.tool;}
+function selectCityTool(b){playSound("click");document.querySelectorAll(".city-tool").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");selectedCityTool=b.dataset.tool;}
 function terrainIcon(t){return t==="sea"?"🌊":t==="mountain"?"⛰️":"🌱";}
 function renderCity(){
  if(!state.city)state.city=createInitialCity(); recalculateCity();
@@ -492,12 +540,12 @@ function renderCity(){
 }
 function handleCityCell(i){
  const c=state.city.cells[i];
- if(selectedCityTool==="buy"){if(c.owned)return alert("이미 보유한 땅입니다.");if(state.money<c.price)return alert("국고가 부족합니다.");state.money-=c.price;c.owned=true;state.log.push("🗺️ 새 영토 1칸 구매.");render();return}
+ if(selectedCityTool==="buy"){if(c.owned)return alert("이미 보유한 땅입니다.");if(state.money<c.price)return alert("국고가 부족합니다.");state.money-=c.price;c.owned=true;playSound("buy");state.log.push("🗺️ 새 영토 1칸 구매.");render();return}
  if(!c.owned)return alert("먼저 땅을 구매하세요.");
- if(selectedCityTool==="demolish"){if(!c.building)return alert("철거할 건물이 없습니다.");c.building=null;render();return}
+ if(selectedCityTool==="demolish"){if(!c.building){playSound("error");return alert("철거할 건물이 없습니다.");}c.building=null;playSound("demolish");render();return}
  if(c.building)return alert("이미 건물이 있습니다.");
  const d=CITY_BUILDINGS[selectedCityTool];if(!d)return;if(!d.terrains.includes(c.terrain))return alert("이 지형에는 지을 수 없습니다.");if(state.money<d.cost)return alert("국고가 부족합니다.");
- state.money-=d.cost;c.building=selectedCityTool;state.log.push(d.icon+" "+d.name+" 건설.");render();
+ state.money-=d.cost;c.building=selectedCityTool;playSound("build");state.log.push(d.icon+" "+d.name+" 건설.");render();
 }
 function recalculateCity(){
  let housing=0,education=10,safety=50,income=0,happy=0;
@@ -511,7 +559,198 @@ function processCityMonth(){
  state.tech=clamp(state.tech+Math.round((state.city.education-10)/50),0,100);
 }
 
+
+const ENEMY_TEMPLATES = [
+  {name:"아르곤 연방",flag:"🦅",power:28,economy:35,relation:15,land:8,aggression:35},
+  {name:"벨로아 왕국",flag:"👑",power:20,economy:24,relation:45,land:6,aggression:20},
+  {name:"노르칸 제국",flag:"🐉",power:42,economy:30,relation:-10,land:10,aggression:70}
+];
+
+function createWarState(){
+  return {
+    enemies: ENEMY_TEMPLATES.map(x=>({...x,atWar:false,defeated:false})),
+    capturedLand:0,
+    monthlyCost:0,
+    log:[]
+  };
+}
+
+function ourMilitaryPower(){
+  const landBonus = state.city ? state.city.cells.filter(c=>c.owned).length * 0.6 : 0;
+  const policeBonus = state.city ? state.city.safety * 0.08 : 0;
+  return Math.round(state.defense + landBonus + policeBonus);
+}
+
+function renderWar(){
+  if(!state.war) state.war=createWarState();
+
+  const ourPower=ourMilitaryPower();
+  const activeWars=state.war.enemies.filter(e=>e.atWar && !e.defeated);
+  state.war.monthlyCost=activeWars.length*0.6;
+
+  document.getElementById("ourPowerText").textContent=ourPower;
+  document.getElementById("warStatusText").textContent=
+    activeWars.length ? activeWars.length+"개국과 전쟁 중" : "평화";
+  document.getElementById("capturedLandText").textContent=state.war.capturedLand+"칸";
+  document.getElementById("warCostText").textContent=state.war.monthlyCost.toFixed(1)+"억/월";
+
+  const grid=document.getElementById("enemyGrid");
+  grid.innerHTML="";
+
+  state.war.enemies.forEach((e,index)=>{
+    const card=document.createElement("div");
+    card.className="enemy-card";
+
+    let status=e.defeated?"항복":e.atWar?"전쟁 중":e.relation>=60?"우호":e.relation<=0?"적대":"중립";
+
+    card.innerHTML=`
+      <h4>${e.flag} ${e.name}</h4>
+      <div class="enemy-stats">
+        상태: <b>${status}</b><br>
+        군사력: ${Math.round(e.power)}<br>
+        경제력: ${Math.round(e.economy)}<br>
+        관계: ${Math.round(e.relation)}<br>
+        영토: ${e.land}칸
+      </div>
+      <div class="enemy-actions">
+        <button onclick="diplomacyAction(${index},'trade')">🤝 무역</button>
+        <button onclick="diplomacyAction(${index},'gift')">🎁 지원</button>
+        <button onclick="diplomacyAction(${index},'spy')">🕵️ 첩보</button>
+        <button onclick="diplomacyAction(${index},'war')">⚔️ 전쟁</button>
+        ${e.atWar && !e.defeated ? `<button onclick="battleEnemy(${index})">💥 공격</button>
+        <button onclick="diplomacyAction(${index},'peace')">🕊️ 평화협상</button>` : ""}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  const log=document.getElementById("warLog");
+  log.innerHTML=state.war.log.length ? state.war.log.slice().reverse().slice(0,8).map(x=>"• "+x).join("<br>") : "아직 전쟁 기록이 없습니다.";
+}
+
+function diplomacyAction(index,action){
+  const e=state.war.enemies[index];
+  if(e.defeated){playSound("error");alert("이미 항복한 나라입니다.");return}
+
+  if(action==="trade"){
+    if(e.atWar){playSound("error");alert("전쟁 중에는 무역할 수 없습니다.");return}
+    e.relation+=8;
+    state.money+=0.3;
+    if(state.company)state.company.sales+=0.15;
+    state.war.log.push(`🤝 ${e.name}과 무역 협정. 국고 +0.3억.`);
+    playSound("money");
+  }
+
+  if(action==="gift"){
+    if(state.money<0.5){playSound("error");alert("국고가 부족합니다.");return}
+    state.money-=0.5;e.relation+=15;
+    state.war.log.push(`🎁 ${e.name}에 0.5억 지원. 관계 상승.`);
+    playSound("success");
+  }
+
+  if(action==="spy"){
+    if(state.money<0.3){playSound("error");alert("국고가 부족합니다.");return}
+    state.money-=0.3;
+    if(Math.random()<0.65){
+      e.power=Math.max(5,e.power-3);
+      state.war.log.push(`🕵️ 첩보 성공! ${e.name} 군사력 -3.`);
+      playSound("success");
+    }else{
+      e.relation-=12;
+      state.war.log.push(`🚨 첩보 실패! ${e.name}과 관계 악화.`);
+      playSound("error");
+    }
+  }
+
+  if(action==="war"){
+    if(e.atWar){alert("이미 전쟁 중입니다.");return}
+    const ok=confirm(`${e.name}에 전쟁을 선포할까요?`);
+    if(!ok)return;
+    e.atWar=true;e.relation=-100;
+    state.happiness=clamp(state.happiness-6,0,100);
+    state.approval=clamp(state.approval-3,0,100);
+    state.war.log.push(`⚔️ ${e.name}에 전쟁 선포.`);
+    playSound("error");
+  }
+
+  if(action==="peace"){
+    if(!e.atWar)return;
+    const chance=Math.max(0.2,Math.min(0.8,(ourMilitaryPower()-e.power+50)/100));
+    if(Math.random()<chance){
+      e.atWar=false;e.relation=-10;
+      state.war.log.push(`🕊️ ${e.name}과 평화협정 체결.`);
+      playSound("success");
+    }else{
+      state.war.log.push(`❌ ${e.name}이 평화협상을 거절.`);
+      playSound("error");
+    }
+  }
+
+  e.relation=clamp(e.relation,-100,100);
+  render();
+}
+
+function battleEnemy(index){
+  const e=state.war.enemies[index];
+  if(!e.atWar || e.defeated)return;
+  if(state.money<0.8){playSound("error");alert("공격에는 국고 0.8억이 필요합니다.");return}
+
+  state.money-=0.8;
+  const our=ourMilitaryPower()*(0.85+Math.random()*0.3);
+  const enemy=e.power*(0.85+Math.random()*0.3);
+
+  if(our>=enemy){
+    const damage=4+Math.floor(Math.random()*7);
+    e.power=Math.max(0,e.power-damage);
+    state.defense=clamp(state.defense+1,0,100);
+    state.war.log.push(`💥 ${e.name} 공격 성공! 적 군사력 -${damage}.`);
+    playSound("build");
+
+    if(e.power<=5){
+      e.defeated=true;e.atWar=false;
+      const captured=Math.max(1,Math.ceil(e.land/3));
+      state.war.capturedLand+=captured;
+      state.money+=Math.max(1,e.economy*0.05);
+      state.approval=clamp(state.approval+8,0,100);
+      state.war.log.push(`🏳️ ${e.name} 항복! 영토 ${captured}칸 점령.`);
+      playSound("success");
+    }
+  }else{
+    const loss=3+Math.floor(Math.random()*6);
+    state.defense=clamp(state.defense-loss,0,100);
+    state.population=Math.max(0,state.population-(20+Math.floor(Math.random()*60)));
+    state.happiness=clamp(state.happiness-5,0,100);
+    state.war.log.push(`🔥 공격 실패! 우리 국방력 -${loss}, 인구 피해 발생.`);
+    playSound("error");
+  }
+
+  render();
+}
+
+function processWarMonth(){
+  if(!state.war)return;
+  const active=state.war.enemies.filter(e=>e.atWar && !e.defeated);
+  if(!active.length)return;
+
+  const cost=active.length*0.6;
+  state.money-=cost;
+  state.happiness=clamp(state.happiness-active.length,0,100);
+
+  active.forEach(e=>{
+    e.power+=Math.random()*1.5;
+    if(Math.random()<e.aggression/200){
+      state.defense=clamp(state.defense-2,0,100);
+      state.population=Math.max(0,state.population-10);
+      state.war.log.push(`🚨 ${e.name}의 기습 공격! 국방력 -2.`);
+      playSound("error");
+    }
+  });
+
+  state.war.log.push(`💸 전쟁 유지비 ${cost.toFixed(1)}억 지출.`);
+}
+
 function createCompany(){
+  playSound("click");
   const name=document.getElementById("companyNameInput").value.trim();
   const type=document.getElementById("companyTypeInput").value;
 
@@ -534,12 +773,14 @@ function createCompany(){
 
   state.economy=clamp(state.economy+6,0,100);
   state.approval=clamp(state.approval+2,0,100);
+  playSound("success");
   state.log.push(`🏢 ${name}(${type}) 설립. 국가예산 3억 원 투자.`);
   render();
 }
 
 
 function transferToTreasury(amount){
+  playSound("click");
   if(!state.company) return;
   const c = state.company;
 
@@ -551,11 +792,13 @@ function transferToTreasury(amount){
   c.cash -= amount;
   state.money += amount;
   state.approval = clamp(state.approval + 1, 0, 100);
+  playSound("money");
   state.log.push(`🏦 ${c.name}: 국고로 ${amount}억 원 송금.`);
   render();
 }
 
 function transferAllToTreasury(){
+  playSound("click");
   if(!state.company) return;
   const c = state.company;
   const amount = Math.floor(c.cash * 100) / 100;
@@ -571,6 +814,7 @@ function transferAllToTreasury(){
   c.cash = 0;
   state.money += amount;
   state.approval = clamp(state.approval + 2, 0, 100);
+  playSound("money");
   state.log.push(`💸 ${c.name}: 회사 자금 ${amount.toFixed(2)}억 원 전액을 국고로 송금.`);
   render();
 }
@@ -619,6 +863,7 @@ function renderCompany(){
 }
 
 function companyAction(action){
+  playSound("click");
   if(!state.company)return;
   const c=state.company;
 
@@ -689,6 +934,7 @@ function startPassiveIncome(){
     if(c.secondsToSettlement <= 0){
       c.cash += c.sales;
       processCityMonth();
+      playSound("money");
       state.log.push(`💰 ${c.name}: 월말 정산 완료. 월매출 ${c.sales.toFixed(1)}억 원 입금.`);
       c.secondsToSettlement = 60;
     }
