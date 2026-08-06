@@ -69,7 +69,7 @@
   .city-toolbar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
   .city-tool{border:1px solid var(--border);border-radius:12px;padding:10px;background:white;font-weight:800}
   .city-tool.selected{border-color:var(--primary);background:#edf1ff}
-  .city-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;max-width:620px;margin:12px auto}
+  .city-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;max-width:620px;margin:12px auto;max-height:440px;overflow-y:auto;padding:4px}
   .city-cell{aspect-ratio:1;border:1px solid #cfd7e8;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;position:relative}
   .city-cell.locked{filter:grayscale(.55);opacity:.55}
   .city-cell .price{position:absolute;bottom:3px;right:4px;font-size:9px;background:#fff;padding:1px 3px;border-radius:4px}
@@ -195,7 +195,7 @@
 
     <div class="city-panel">
       <h3>🗺️ 도시와 영토</h3>
-      <p style="color:var(--muted)">빈 땅을 사고 건물을 지으세요. 바다에는 항구, 산에는 공장, 평야에는 대부분의 건물을 지을 수 있습니다.</p>
+      <p style="color:var(--muted)">빈 땅을 사고 건물을 지으세요. 바다에는 항구, 산에는 공장·댐·발전소·고속도로·우주센터, 평야에는 공항·철도역을 포함한 대부분의 건물을 지을 수 있습니다. 우주센터는 기술력 40 이상부터 지을 수 있어요. 땅이 부족하면 "새 영토 개척하기"로 땅을 계속 늘릴 수 있습니다.</p>
       <div class="city-stats">
         <div class="city-stat"><small>보유 영토</small><b id="landOwnedText"></b></div>
         <div class="city-stat"><small>주거 수용량</small><b id="housingText"></b></div>
@@ -215,9 +215,16 @@
         <button class="city-tool" data-tool="police" onclick="selectCityTool(this)">🚓 경찰서 1억</button>
         <button class="city-tool" data-tool="park" onclick="selectCityTool(this)">🌳 공원 0.6억</button>
         <button class="city-tool" data-tool="port" onclick="selectCityTool(this)">⚓ 항구 2억</button>
+        <button class="city-tool" data-tool="airport" onclick="selectCityTool(this)">✈️ 공항 3.5억</button>
+        <button class="city-tool" data-tool="train" onclick="selectCityTool(this)">🚄 고속철도역 2.5억</button>
+        <button class="city-tool" data-tool="highway" onclick="selectCityTool(this)">🛣 고속도로 1억</button>
+        <button class="city-tool" data-tool="power" onclick="selectCityTool(this)">⚡ 발전소 2.5억</button>
+        <button class="city-tool" data-tool="dam" onclick="selectCityTool(this)">💧 댐 3억</button>
+        <button class="city-tool" data-tool="space" onclick="selectCityTool(this)">🛰 우주센터 5억</button>
         <button class="city-tool" data-tool="demolish" onclick="selectCityTool(this)">🧹 철거</button>
       </div>
       <div id="cityGrid" class="city-grid"></div>
+      <button type="button" class="btn btn-soft" style="margin-top:10px;width:100%" onclick="expandLand()">🧭 새 영토 개척하기 (칸 수가 늘어날수록 비용 상승)</button>
     </div>
 
 
@@ -518,7 +525,13 @@ const CITY_BUILDINGS={
  fire:{icon:"🚒",name:"소방서",cost:1,terrains:["plain"],housing:0,happiness:2,income:0,safety:7},
  police:{icon:"🚓",name:"경찰서",cost:1,terrains:["plain"],housing:0,happiness:2,income:0,safety:9},
  park:{icon:"🌳",name:"공원",cost:.6,terrains:["plain"],housing:0,happiness:5,income:0},
- port:{icon:"⚓",name:"항구",cost:2,terrains:["sea"],housing:0,happiness:1,income:.22}
+ port:{icon:"⚓",name:"항구",cost:2,terrains:["sea"],housing:0,happiness:1,income:.22},
+ airport:{icon:"✈️",name:"공항",cost:3.5,terrains:["plain"],housing:0,happiness:-2,income:.32,tech:3},
+ train:{icon:"🚄",name:"고속철도역",cost:2.5,terrains:["plain"],housing:0,happiness:2,income:.16},
+ highway:{icon:"🛣️",name:"고속도로",cost:1,terrains:["plain","mountain"],housing:0,happiness:-1,income:.07},
+ power:{icon:"⚡",name:"발전소",cost:2.5,terrains:["plain","mountain"],housing:0,happiness:-3,income:.14,environment:-6},
+ dam:{icon:"💧",name:"댐",cost:3,terrains:["mountain"],housing:0,happiness:1,income:.1,environment:5,safety:3},
+ space:{icon:"🛰️",name:"우주센터",cost:5,terrains:["plain","mountain"],housing:0,happiness:2,income:.36,tech:8,minTech:40}
 };
 let selectedCityTool="buy";
 
@@ -545,18 +558,39 @@ function handleCityCell(i){
  if(selectedCityTool==="demolish"){if(!c.building){playSound("error");return alert("철거할 건물이 없습니다.");}c.building=null;playSound("demolish");render();return}
  if(c.building)return alert("이미 건물이 있습니다.");
  const d=CITY_BUILDINGS[selectedCityTool];if(!d)return;if(!d.terrains.includes(c.terrain))return alert("이 지형에는 지을 수 없습니다.");if(state.money<d.cost)return alert("국고가 부족합니다.");
- state.money-=d.cost;c.building=selectedCityTool;playSound("build");state.log.push(d.icon+" "+d.name+" 건설.");render();
+ if(d.minTech && state.tech<d.minTech)return alert(d.name+"는 기술력 "+d.minTech+" 이상부터 지을 수 있습니다.");
+ state.money-=d.cost;c.building=selectedCityTool;playSound("build");state.log.push(d.icon+" "+d.name+" 건설.");
+ if(d.tech)state.tech=clamp(state.tech+d.tech,0,100);
+ render();
+}
+function expandLand(){
+ playSound("click");
+ if(!state.city)state.city=createInitialCity();
+ const rows=Math.ceil(state.city.cells.length/6);
+ const cost=Math.round((1+rows*0.4)*10)/10;
+ if(state.money<cost){playSound("error");alert(`영토 개척에는 ${cost.toFixed(1)}억 원이 필요합니다.`);return}
+ state.money-=cost;
+ const terrainPool=["plain","plain","plain","mountain","sea"];
+ for(let i=0;i<6;i++){
+  const terrain=terrainPool[Math.floor(Math.random()*terrainPool.length)];
+  const price=Math.round((0.4+Math.random()*0.6+(terrain==="sea"?.15:terrain==="mountain"?.1:0))*10)/10;
+  state.city.cells.push({terrain,owned:false,building:null,price});
+ }
+ state.log.push("🧭 새로운 영토 6칸을 개척했습니다.");
+ playSound("build");
+ render();
 }
 function recalculateCity(){
- let housing=0,education=10,safety=50,income=0,happy=0;
- state.city.cells.forEach(c=>{if(!c.building)return;const b=CITY_BUILDINGS[c.building];housing+=b.housing||0;education+=b.education||0;safety+=b.safety||0;income+=b.income||0;happy+=b.happiness||0});
- state.city.housing=housing;state.city.education=clamp(education,0,100);state.city.safety=clamp(safety,0,100);state.city.income=income;state.city.happyEffect=happy;
+ let housing=0,education=10,safety=50,income=0,happy=0,envEffect=0;
+ state.city.cells.forEach(c=>{if(!c.building)return;const b=CITY_BUILDINGS[c.building];housing+=b.housing||0;education+=b.education||0;safety+=b.safety||0;income+=b.income||0;happy+=b.happiness||0;envEffect+=b.environment||0});
+ state.city.housing=housing;state.city.education=clamp(education,0,100);state.city.safety=clamp(safety,0,100);state.city.income=income;state.city.happyEffect=happy;state.city.envEffect=envEffect;
 }
 function processCityMonth(){
  if(!state.city)return;recalculateCity();state.money+=state.city.income;if(state.company)state.company.sales+=state.city.income*.08;
  if(state.city.housing>state.population){const growth=Math.max(1,Math.round((state.city.housing-state.population)*.08*Math.max(.2,state.happiness/100)));state.population+=growth}
  state.happiness=clamp(state.happiness+Math.round((state.city.happyEffect||0)*.05),0,100);
  state.tech=clamp(state.tech+Math.round((state.city.education-10)/50),0,100);
+ state.environment=clamp(state.environment+Math.round((state.city.envEffect||0)*.05),0,100);
 }
 
 
