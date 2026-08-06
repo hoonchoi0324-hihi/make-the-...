@@ -313,7 +313,26 @@
 let soundEnabled=true,audioContext=null;
 function getAudioContext(){if(!audioContext){const C=window.AudioContext||window.webkitAudioContext;if(C)audioContext=new C()}if(audioContext&&audioContext.state==="suspended")audioContext.resume();return audioContext}
 function tone(f,d=.08,t="sine",v=.06,delay=0){if(!soundEnabled)return;const c=getAudioContext();if(!c)return;const o=c.createOscillator(),g=c.createGain(),s=c.currentTime+delay;o.type=t;o.frequency.setValueAtTime(f,s);g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(v,s+.01);g.gain.exponentialRampToValueAtTime(.0001,s+d);o.connect(g);g.connect(c.destination);o.start(s);o.stop(s+d+.02)}
-function playSound(n){if(n==="click")tone(520,.05);if(n==="buy"){tone(420,.07,"triangle");tone(640,.1,"triangle",.06,.07)}if(n==="build"){tone(260,.06,"square",.035);tone(390,.07,"square",.035,.07);tone(520,.11,"triangle",.055,.14)}if(n==="money"){tone(660,.07);tone(880,.11,"sine",.06,.08)}if(n==="success"){tone(523,.08,"triangle");tone(659,.08,"triangle",.055,.09);tone(784,.15,"triangle",.065,.18)}if(n==="error"){tone(180,.13,"sawtooth",.045);tone(140,.17,"sawtooth",.04,.1)}if(n==="demolish"){tone(180,.08,"square",.04);tone(120,.14,"square",.035,.07)}}
+function siren(duration=1.6){
+  if(!soundEnabled)return;const c=getAudioContext();if(!c)return;
+  const o=c.createOscillator(),g=c.createGain();
+  const start=c.currentTime;
+  o.type="sawtooth";
+  g.gain.setValueAtTime(.0001,start);
+  g.gain.exponentialRampToValueAtTime(.09,start+.08);
+  o.frequency.setValueAtTime(480,start);
+  const cycles=4,cycleDur=duration/cycles;
+  for(let i=0;i<cycles;i++){
+    const t1=start+i*cycleDur,t2=t1+cycleDur/2,t3=t1+cycleDur;
+    o.frequency.linearRampToValueAtTime(920,t2);
+    o.frequency.linearRampToValueAtTime(480,t3);
+  }
+  g.gain.setValueAtTime(.09,start+duration-.15);
+  g.gain.exponentialRampToValueAtTime(.0001,start+duration);
+  o.connect(g);g.connect(c.destination);
+  o.start(start);o.stop(start+duration+.05);
+}
+function playSound(n){if(n==="click")tone(520,.05);if(n==="buy"){tone(420,.07,"triangle");tone(640,.1,"triangle",.06,.07)}if(n==="build"){tone(260,.06,"square",.035);tone(390,.07,"square",.035,.07);tone(520,.11,"triangle",.055,.14)}if(n==="money"){tone(660,.07);tone(880,.11,"sine",.06,.08)}if(n==="success"){tone(523,.08,"triangle");tone(659,.08,"triangle",.055,.09);tone(784,.15,"triangle",.065,.18)}if(n==="error"){tone(180,.13,"sawtooth",.045);tone(140,.17,"sawtooth",.04,.1)}if(n==="demolish"){tone(180,.08,"square",.04);tone(120,.14,"square",.035,.07)}if(n==="siren")siren()}
 function toggleSound(){soundEnabled=!soundEnabled;document.getElementById('soundButton').textContent=soundEnabled?'🔊':'🔇';try{localStorage.setItem('nationSoundEnabled',soundEnabled?'1':'0')}catch(e){}if(soundEnabled)playSound('success')}
 try{soundEnabled=localStorage.getItem('nationSoundEnabled')!=='0'}catch(e){}
 document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('soundButton');if(b)b.textContent=soundEnabled?'🔊':'🔇'});
@@ -420,6 +439,7 @@ function openGame(){
   document.getElementById('game').classList.remove('hidden');
   render();
   startPassiveIncome();
+  startWarTimer();
 }
 
 function render(){
@@ -704,7 +724,7 @@ function diplomacyAction(index,action){
     state.happiness=clamp(state.happiness-6,0,100);
     state.approval=clamp(state.approval-3,0,100);
     state.war.log.push(`⚔️ ${e.name}에 전쟁 선포.`);
-    playSound("error");
+    playSound("siren");
   }
 
   if(action==="peace"){
@@ -983,6 +1003,34 @@ function startPassiveIncome(){
     const profitEl = document.getElementById("companyProfitText");
     if(profitEl) profitEl.textContent = c.secondsToSettlement + "초 후";
   },1000);
+}
+
+let warDeclareTimer = null;
+
+function startWarTimer(){
+  if(warDeclareTimer) clearInterval(warDeclareTimer);
+
+  warDeclareTimer = setInterval(function(){
+    if(!state || !state.war) return;
+
+    let declared=false;
+    state.war.enemies.forEach(e=>{
+      if(e.defeated || e.atWar) return;
+      if(Math.random() < 0.2){
+        e.atWar=true;
+        e.relation=-100;
+        state.happiness=clamp(state.happiness-6,0,100);
+        state.approval=clamp(state.approval-3,0,100);
+        state.war.log.push(`🚨 ${e.name}이(가) 기습적으로 전쟁을 선포했습니다!`);
+        declared=true;
+      }
+    });
+
+    if(declared){
+      playSound("siren");
+      render();
+    }
+  },30000);
 }
 
 function saveGame(){
