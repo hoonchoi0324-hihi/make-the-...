@@ -6,7 +6,20 @@
 <meta name="theme-color" content="#3457d5" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+<link rel="apple-touch-icon" href="./icons/icon-192.png" />
+<meta name="theme-color" content="#3457d5" />
 <meta name="format-detection" content="telephone=no" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="AI 나라 키우기" />
+<meta property="og:description" content="나만의 나라, 세계를 지배하라! 나라를 키우고, 도시를 건설하고, 전쟁을 벌이세요." />
+<meta property="og:image" content="https://hoonchoi0324-hihi.github.io/make-the-.../og-image.png" />
+<meta property="og:url" content="https://hoonchoi0324-hihi.github.io/make-the-.../" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="AI 나라 키우기" />
+<meta name="twitter:description" content="나만의 나라, 세계를 지배하라!" />
+<meta name="twitter:image" content="https://hoonchoi0324-hihi.github.io/make-the-.../og-image.png" />
 <title>AI 나라 키우기</title>
 <style>
   :root{
@@ -440,6 +453,7 @@ function openGame(){
   render();
   startPassiveIncome();
   startWarTimer();
+  startIndependenceTimer();
 }
 
 function render(){
@@ -763,6 +777,7 @@ function battleEnemy(index){
     if(e.power<=5){
       e.defeated=true;e.atWar=false;
       const captured=Math.max(1,Math.ceil(e.land/3));
+      e.capturedFromThis=captured;
       state.war.capturedLand+=captured;
       state.money+=Math.max(1,e.economy*0.05);
       state.approval=clamp(state.approval+8,0,100);
@@ -1033,6 +1048,36 @@ function startWarTimer(){
   },30000);
 }
 
+let independenceTimer = null;
+
+function startIndependenceTimer(){
+  if(independenceTimer) clearInterval(independenceTimer);
+
+  independenceTimer = setInterval(function(){
+    if(!state || !state.war) return;
+
+    let happened=false;
+    state.war.enemies.forEach(e=>{
+      if(!e.defeated) return;
+      if(Math.random() < 0.1){
+        const lost=e.capturedFromThis||0;
+        state.war.capturedLand=Math.max(0,state.war.capturedLand-lost);
+        e.defeated=false;
+        e.capturedFromThis=0;
+        e.power=Math.max(15,Math.round((ENEMY_TEMPLATES.find(t=>t.name===e.name)?.power||25)*0.5));
+        e.relation=-30;
+        state.war.log.push(`🎌 ${e.name}이(가) 독립을 선언했습니다! 점령했던 영토 ${lost}칸을 잃었습니다.`);
+        happened=true;
+      }
+    });
+
+    if(happened){
+      playSound("error");
+      render();
+    }
+  },40000);
+}
+
 function saveGame(){
   try{
     localStorage.setItem("aiNationGame",JSON.stringify(state));
@@ -1055,6 +1100,13 @@ function resetGame(){
     localStorage.removeItem("aiNationGame");
     location.reload();
   }
+}
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+  });
 }
 </script>
 </body>
